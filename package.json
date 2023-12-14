@@ -7,8 +7,7 @@
   "license": "ISC",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node ."
+    "start": "tsc && node ."
   },
   "devDependencies": {
     "typescript": "^5.3.3"
