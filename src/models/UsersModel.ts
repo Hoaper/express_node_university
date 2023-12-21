@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, {Document} from "mongoose";
 
 const userSchema = new mongoose.Schema({
     login: {
@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema({
             {
                 book_id: {
                     type: mongoose.Schema.Types.ObjectId,
+                    ref: 'books',
                     required: true,
                 },
                 due_date: {
