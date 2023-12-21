@@ -1,13 +1,10 @@
 import express from 'express';
-import mongoose from "mongoose";
-import BooksModel from "@/models/BooksModel";
+import mongoose, {Types} from "mongoose";
 import authRouter from "@/auth/router";
 import bodyParser from "body-parser";
 import cors from "cors";
-import jwt from "jsonwebtoken";
-import {isAllowAccess} from "@/utils";
 import UsersModel from "@/models/UsersModel";
-import {DecodedToken} from "@/types";
+import booksRouter from "@/books/route";
 
 
 const SECRET_KEY = "1oic2oi1ensd0a9dicw121k32aspdojacs";
@@ -26,7 +23,6 @@ async function main() {
 }
 
 app.use(bodyParser.json());
-// app.use(bodyParser.urlencoded({extended: true}));
 app.use(cors())
 
 app.get('/', (request, response) => {
@@ -34,102 +30,77 @@ app.get('/', (request, response) => {
 });
 
 
-app.get("/books", async (request, response) => {
-    let {page, limit} = request.query;
-    if (!page || !limit) {
-        response.send("Missing params")
-        return;
-    }
-
-
-
-    const page_mongo = parseInt(page.toString());
-    const limit_mongo = parseInt(limit.toString());
-
-    const books = await BooksModel.find({}).skip((page_mongo - 1) * limit_mongo).limit(limit_mongo);
-    response.send(books);
-});
-
-app.get("/books/:id", async (request, response) => {
-    try {
-        const book = await BooksModel.findById(request.params.id);
-        if (book) {
-            response.status(200).json(book);
-        } else {
-            response.status(400).json({message: "Book not found"});
-        }
-    } catch (err) {
-        return response.status(400).json({message: "Invalid id"});
-    }
-});
-
-app.post("/process_order", async (request, response) => {
+app.get("/profile/:id", async (req, res) => {
+    //{
+    //     book_id: new ObjectId('657dea85f1b193d65aabff28'),
+    //     due_date: 2023-12-28T09:30:03.845Z,
+    //     book: {
+    //       _id: new ObjectId('657dea85f1b193d65aabff28'),
+    //       image: 'https://cdn.f.kz/prod/786/785876_550.jpg',
+    //       title: 'Спеши любить',
+    //       description: 'Тихий городок Бофор.\r\n' +
+    //         'Каждый год Лэндон Картер приезжает сюда, чтобы вспомнить историю своей первой любви...\n' +
+    //         '\r\n' +
+    //         'Историю страсти и нежности, много лет назад связавшей его, парня из богатой семьи, и Джейми Салливан, скромную дочь местного пастора.\n' +
+    //         '\r\n' +
+    //         'История радости и грусти, счастья и боли.\n' +
+    //         '\r\n' +
+    //         'Историю чувства, которое человеку доводится испытать лишь раз в жизни — и запомнить навсегда...\n',
+    //       author: 'Н. Спаркс',
+    //       rating: 4.9,
+    //       pages: 224,
+    //       languages: 'русский',
+    //       date: 2016,
+    //       category: 'Художественная литература',
+    //       stock: 3,
+    //       validUntil: 2033-12-18T13:34:18.053Z
+    //     }
+    //}
 
     try {
-        const {token, book_id} = request.body;
-        console.log(token, book_id)
-        const verification = jwt.verify(token, SECRET_KEY) as DecodedToken;
-        const book = await BooksModel.findById(book_id);
-        const user = await UsersModel.findById(verification.userId);
-
-        if (!book) return response.status(400).json({message: "Book not found"});
-        if (!user) return response.status(400).json({message: "User not found"});
-        if (book.stock == 0) return response.status(400).json({message: "No stock"});
-
-        const res = await UsersModel.aggregate([
+        const user = await UsersModel.aggregate([
             {
-                $match: {
-                    'issuances.book_id': book._id,
+                $match: { _id: new Types.ObjectId(req.params.id) },
+            },
+            {
+                $unwind: "$issuances", // Unwind the issuances array
+            },
+            {
+                $lookup: {
+                    from: "books",
+                    localField: "issuances.book_id",
+                    foreignField: "_id",
+                    as: "bookDetails",
                 },
             },
             {
-                $unwind: '$issuances',
+                $unwind: "$bookDetails", // Unwind the bookDetails array
             },
             {
-                $match: {
-                    'issuances.book_id': book._id,
+                $project: {
+                    _id: 0,
+                    book_id: "$issuances.book_id",
+                    due_date: "$issuances.due_date",
+                    book: "$bookDetails",
                 },
             },
-            {
-                $group: {
-                    _id: null,
-                    count: { $sum: 1 },
-                },
-            },
-        ]).exec() 
-        if ((user.role == "student" && res[0] && res[0].count >= 1) || (user.role == "teacher" && res[0] && res[0].count >= 3) ) {
-            return response.status(400).json({message: `You have already taken this book ${res[0].count} times.`});
-        }
+        ])
 
-        if (isAllowAccess(verification.role, book.stock)) {
-            const date = new Date();
-            date.setDate(date.getDate() + 7);
 
-            await UsersModel.findByIdAndUpdate(
-                verification.userId,
-                {
-                    issuances: [
-                        ...user.issuances,
-                        { book_id: book._id, due_date: date }
-                    ]
-                },
+        console.log(user)
 
-            )
-
-            book.stock -= 1;
-            await book.save();
-
-            return response.status(200).json({message: "Order processed"});
+        if (user) {
+            res.status(200).json(user);
         } else {
-            return response.status(400).json({message: "No access"});
+            res.status(400).json({message: "User not found"});
         }
-
-
     } catch (err) {
         console.log(err)
-        return response.status(400).json({message: err});
+        return res.status(400).json({message: "Invalid id"});
     }
-});
+})
+
+app.use('/books', booksRouter);
 
 app.use("/auth", authRouter)
 
