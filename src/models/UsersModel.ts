@@ -30,6 +30,14 @@ const userSchema = new mongoose.Schema({
         ],
         required: true,
     },
+    token: {
+        type: String,
+        required: true,
+    },
+    validated: {
+        type: Boolean,
+        required: true,
+    }
 });
 
 const UserModel = mongoose.model('User', userSchema);

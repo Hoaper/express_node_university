@@ -14,7 +14,7 @@ const port = 5000;
 async function main() {
 
     try {
-        await mongoose.connect("mongodb://0.0.0.0:27017/mongo_university");
+        await mongoose.connect("mongodb+srv://client:5423@golang.fcwced4.mongodb.net/db");
         app.listen(port);
         console.log(`Running on http://localhost:${port}`);
     } catch (err) {
@@ -31,32 +31,6 @@ app.get('/', (request, response) => {
 
 
 app.get("/profile/:id", async (req, res) => {
-    //{
-    //     book_id: new ObjectId('657dea85f1b193d65aabff28'),
-    //     due_date: 2023-12-28T09:30:03.845Z,
-    //     book: {
-    //       _id: new ObjectId('657dea85f1b193d65aabff28'),
-    //       image: 'https://cdn.f.kz/prod/786/785876_550.jpg',
-    //       title: 'Спеши любить',
-    //       description: 'Тихий городок Бофор.\r\n' +
-    //         'Каждый год Лэндон Картер приезжает сюда, чтобы вспомнить историю своей первой любви...\n' +
-    //         '\r\n' +
-    //         'Историю страсти и нежности, много лет назад связавшей его, парня из богатой семьи, и Джейми Салливан, скромную дочь местного пастора.\n' +
-    //         '\r\n' +
-    //         'История радости и грусти, счастья и боли.\n' +
-    //         '\r\n' +
-    //         'Историю чувства, которое человеку доводится испытать лишь раз в жизни — и запомнить навсегда...\n',
-    //       author: 'Н. Спаркс',
-    //       rating: 4.9,
-    //       pages: 224,
-    //       languages: 'русский',
-    //       date: 2016,
-    //       category: 'Художественная литература',
-    //       stock: 3,
-    //       validUntil: 2033-12-18T13:34:18.053Z
-    //     }
-    //}
-
     try {
         const user = await UsersModel.aggregate([
             {

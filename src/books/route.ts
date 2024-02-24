@@ -7,20 +7,31 @@ import {isAllowAccess} from "@/utils";
 
 const SECRET_KEY = "1oic2oi1ensd0a9dicw121k32aspdojacs";
 const booksRouter = express.Router();
+
 booksRouter.get("/", async (request, response) => {
-    let {page, limit} = request.query;
-    if (!page || !limit) {
-        response.send("Missing params")
-        return;
+    try {
+        const { category: ctg, sortField, sortOrder, page = 1, pageSize = 10 } = request.query;
+
+        const filter: any = {};
+        if (ctg) {
+            filter.category = ctg;
+        }
+
+        const sort: any = {};
+        if (sortField) {
+            sort[sortField as string] = sortOrder === 'desc' ? -1 : 1;
+        }
+
+        const skip = (parseInt(page as string, 10) - 1) * parseInt(pageSize as string, 10);
+
+        const booksQuery = BooksModel.find(filter).sort(sort).skip(skip).limit(parseInt(pageSize as string, 10));
+        const books = await booksQuery;
+
+        response.status(200).json({ books });
+    } catch (error) {
+        console.error('Error:', error);
+        response.status(500).json({ error: 'Internal server error' });
     }
-
-
-
-    const page_mongo = parseInt(page.toString());
-    const limit_mongo = parseInt(limit.toString());
-
-    const books = await BooksModel.find({}).skip((page_mongo - 1) * limit_mongo).limit(limit_mongo);
-    response.send(books);
 });
 
 booksRouter.post("/process_order", async (request, response) => {
@@ -56,12 +67,12 @@ booksRouter.post("/process_order", async (request, response) => {
                     count: { $sum: 1 },
                 },
             },
-        ]).exec()
+        ]).exec();
         if ((user.role == "student" && res[0] && res[0].count >= 1) || (user.role == "teacher" && res[0] && res[0].count >= 3) ) {
             return response.status(400).json({message: `You have already taken this book ${res[0].count} times.`});
         }
 
-        if (isAllowAccess(verification.role, book.stock)) {
+        if (isAllowAccess(verification.role, book.stock, user.get("validated"))){
             const date = new Date();
             date.setDate(date.getDate() + 7);
 
@@ -73,7 +84,6 @@ booksRouter.post("/process_order", async (request, response) => {
                         { book_id: book._id, due_date: date }
                     ]
                 },
-
             )
 
             book.stock -= 1;
