@@ -9,7 +9,7 @@ import booksRouter from "@/books/route";
 
 const SECRET_KEY = "1oic2oi1ensd0a9dicw121k32aspdojacs";
 const app = express();
-const port = 5000;
+const port = 80;
 
 async function main() {
 
