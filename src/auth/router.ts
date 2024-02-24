@@ -48,9 +48,13 @@ authRouter.post('/login', async (req, res, next) => {
 
 authRouter.post('/register', async (req, res) => {
     const {login, password} = req.body;
+    const password_regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!login || !password) {
         return res.status(400).json({message: 'Missing credentials'});
+    }
+    if (!password_regex.test(login)) {
+        return res.status(400).json({message: 'Invalid mail'});
     }
 
     try {
