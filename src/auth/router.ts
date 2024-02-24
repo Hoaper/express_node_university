@@ -76,7 +76,7 @@ authRouter.post('/register', async (req, res) => {
             from: "kuanyshmaximauth@gmail.com",
             to: login,
             subject: `Hello ${login}!`,
-            text: `Your verification link is here! ${"http://localhost:3000/auth/verify?token=" + newUser.get("token")}`,
+            text: `Your verification link is here! ${"https://express-frontend-university.vercel.app/auth/verify?token=" + newUser.get("token")}`,
         })
 
 
